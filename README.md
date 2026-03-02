@@ -1,2 +1,5 @@
-# kubernetes-lab
-Kubernetes Lab Virtual Box environment with 1 controlplane and two deployment nodes
+# Installing Kubernetes the kubeadm way on VirtualBox
+
+Updated March 2025
+
+[Click here](./docs/01-prerequisites.md) to begin.
