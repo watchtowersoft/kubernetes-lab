@@ -96,6 +96,17 @@ def provision_kubernetes_node(node)
   node.vm.provision "setup-ssh", :type => "shell", :path => "ubuntu/ssh.sh"
 end
 
+# Generates an SSH keypair on the controlplane and relays the public key
+# to the shared /vagrant folder for workers to pick up.
+def setup_ssh_controlplane(node)
+  node.vm.provision "setup-ssh-controlplane", :type => "shell", :path => "ubuntu/vagrant/setup-ssh-controlplane.sh"
+end
+
+# Installs the controlplane's public key into this worker's authorized_keys.
+def setup_ssh_worker(node)
+  node.vm.provision "setup-ssh-worker", :type => "shell", :path => "ubuntu/vagrant/setup-ssh-worker.sh"
+end
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -134,6 +145,7 @@ Vagrant.configure("2") do |config|
       node.vm.network "forwarded_port", guest: 22, host: "#{2710}"
     end
     provision_kubernetes_node node
+    setup_ssh_controlplane node
     # Install (opinionated) configs for vim and tmux on master-1. These used by the author for CKA exam.
     node.vm.provision "file", source: "./ubuntu/tmux.conf", destination: "$HOME/.tmux.conf"
     node.vm.provision "file", source: "./ubuntu/vimrc", destination: "$HOME/.vimrc"
@@ -158,6 +170,7 @@ Vagrant.configure("2") do |config|
         node.vm.network "forwarded_port", guest: 22, host: "#{2720 + i}"
       end
       provision_kubernetes_node node
+      setup_ssh_worker node
 
       node.vm.provision "shell", path: "./ubuntu/bootstrap_workernode.sh"
     end

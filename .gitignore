@@ -1,1 +1,3 @@
 quick-steps/
+.vagrant/
+vagrant_controlplane.pub
