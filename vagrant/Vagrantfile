@@ -81,11 +81,11 @@ end
 # Sets up hosts file and DNS
 def setup_dns(node)
   # Set up /etc/hosts
-  node.vm.provision "setup-hosts", :type => "shell", :path => "ubuntu/vagrant/setup-hosts.sh" do |s|
+  node.vm.provision "setup-hosts", :type => "shell", :path => "scripts/vagrant/setup-hosts.sh" do |s|
     s.args = [IP_NW, BUILD_MODE, NUM_WORKER_NODES, MASTER_IP_START, NODE_IP_START]
   end
   # Set up DNS resolution
-  node.vm.provision "setup-dns", type: "shell", :path => "ubuntu/update-dns.sh"
+  node.vm.provision "setup-dns", type: "shell", :path => "scripts/update-dns.sh"
 end
 
 # Runs provisioning steps that are required by masters and workers
@@ -93,18 +93,18 @@ def provision_kubernetes_node(node)
   # Set up DNS
   setup_dns node
   # Set up ssh
-  node.vm.provision "setup-ssh", :type => "shell", :path => "ubuntu/ssh.sh"
+  node.vm.provision "setup-ssh", :type => "shell", :path => "scripts/ssh.sh"
 end
 
 # Generates an SSH keypair on the controlplane and relays the public key
 # to the shared /vagrant folder for workers to pick up.
 def setup_ssh_controlplane(node)
-  node.vm.provision "setup-ssh-controlplane", :type => "shell", :path => "ubuntu/vagrant/setup-ssh-controlplane.sh"
+  node.vm.provision "setup-ssh-controlplane", :type => "shell", :path => "scripts/vagrant/setup-ssh-controlplane.sh"
 end
 
 # Installs the controlplane's public key into this worker's authorized_keys.
 def setup_ssh_worker(node)
-  node.vm.provision "setup-ssh-worker", :type => "shell", :path => "ubuntu/vagrant/setup-ssh-worker.sh"
+  node.vm.provision "setup-ssh-worker", :type => "shell", :path => "scripts/vagrant/setup-ssh-worker.sh"
 end
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
@@ -136,6 +136,16 @@ Vagrant.configure("2") do |config|
       vb.memory = 2048
       vb.cpus = 2
     end
+    node.vm.provider "parallels" do |prl|
+      prl.name = "controlplane"
+      prl.memory = 2048
+      prl.cpus = 2
+    end
+    node.vm.provider "vmware_desktop" do |vmware|
+      vmware.vmx["displayname"] = "controlplane"
+      vmware.memory = 2048
+      vmware.cpus = 2
+    end
     node.vm.hostname = "controlplane"
     if BUILD_MODE == "BRIDGE"
       adapter = ""
@@ -147,10 +157,10 @@ Vagrant.configure("2") do |config|
     provision_kubernetes_node node
     setup_ssh_controlplane node
     # Install (opinionated) configs for vim and tmux on master-1. These used by the author for CKA exam.
-    node.vm.provision "file", source: "./ubuntu/tmux.conf", destination: "$HOME/.tmux.conf"
-    node.vm.provision "file", source: "./ubuntu/vimrc", destination: "$HOME/.vimrc"
+    node.vm.provision "file", source: "./scripts/tmux.conf", destination: "$HOME/.tmux.conf"
+    node.vm.provision "file", source: "./scripts/vimrc", destination: "$HOME/.vimrc"
 
-    node.vm.provision "shell", path: "./ubuntu/bootstrap_controlplane.sh"
+    node.vm.provision "shell", path: "./scripts/bootstrap_controlplane.sh"
   
   end
 
@@ -162,6 +172,16 @@ Vagrant.configure("2") do |config|
         vb.memory = 1024
         vb.cpus = 1
       end
+      node.vm.provider "parallels" do |prl|
+        prl.name = "node0#{i}"
+        prl.memory = 1024
+        prl.cpus = 1
+      end
+      node.vm.provider "vmware_desktop" do |vmware|
+        vmware.vmx["displayname"] = "node0#{i}"
+        vmware.memory = 1024
+        vmware.cpus = 1
+      end
       node.vm.hostname = "node0#{i}"
       if BUILD_MODE == "BRIDGE"
         node.vm.network :public_network, bridge: get_bridge_adapter()
@@ -172,7 +192,7 @@ Vagrant.configure("2") do |config|
       provision_kubernetes_node node
       setup_ssh_worker node
 
-      node.vm.provision "shell", path: "./ubuntu/bootstrap_workernode.sh"
+      node.vm.provision "shell", path: "./scripts/bootstrap_workernode.sh"
     end
   end
 
