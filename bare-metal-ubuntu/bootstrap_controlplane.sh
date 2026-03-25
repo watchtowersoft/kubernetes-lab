@@ -80,7 +80,10 @@ if [[ "${answer,,}" =~ ^(y|yes)$ ]]; then
   echo "disabling controlplane node taint"
   kubectl taint nodes controlplane node-role.kubernetes.io/control-plane:NoSchedule-
 fi
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+wget -O components.yaml https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+sed -i s/"--metric-resolution=15s"/"--metric-resolution=15s\n        - --kubelet-insecure-tls"/ components.yaml
+kubectl apply -f components.yaml
 
 # Prevent laptop from going to sleep when lid is closed (this is a server)
 cat <<EOF | sudo tee -a /etc/systemd/logind.conf >/dev/null
