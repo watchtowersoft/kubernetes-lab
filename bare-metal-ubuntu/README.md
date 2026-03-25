@@ -1,10 +1,6 @@
-# Kubernetes Lab — Bare Metal (Ubuntu)
+# Kubernetes Lab — Bare Metal
 
-Sets up a Kubernetes cluster on physical hosts using kubeadm.
-
-> **Requirements:** All nodes must be running **Ubuntu 24.04 LTS**. The scripts in this directory use `apt` and are Ubuntu-specific. If your machines are running a different OS, this path will not work as-is.
->
-> Any architecture supported by Ubuntu 22.04 is compatible — including x86_64 and ARM64. Apple Silicon Macs running Ubuntu (e.g. via [Asahi Linux](https://asahilinux.org/)) can be used as nodes.
+Sets up a Kubernetes cluster on physical Ubuntu hosts using kubeadm. Ideal for home labs and Apple Silicon Macs where VirtualBox is not an option.
 
 ---
 
@@ -20,7 +16,7 @@ Sets up a Kubernetes cluster on physical hosts using kubeadm.
 
 ### Hosts
 
-- **Ubuntu 24.04 LTS** installed on each host
+- **Ubuntu 22.04 LTS** installed on each host
 - Each host must be reachable over SSH from your admin machine
 - Hosts must be able to reach each other over the network
 
@@ -47,32 +43,30 @@ You can start with a single machine acting as both controlplane and worker (usin
 
 ```bash
 git clone https://github.com/watchtowersoft/kubernetes-lab.git
-cd kubernetes-lab/bare-metal
+cd kubernetes-lab/bare-metal-ubuntu
 ```
 
-### 1. Prepare Each Host
+### 1. Bootstrap the Control Plane
 
-Run the node setup script on **every host** (controlplane and workers):
-
-```bash
-scp setup-node.sh <user>@<host>:~
-ssh <user>@<host> "bash ~/setup-node.sh"
-```
-
-### 2. Bootstrap the Control Plane
-
-SSH into `controlplane` and run:
+Copy and run the script on your `controlplane` host:
 
 ```bash
-scp bootstrap-controlplane.sh <user>@controlplane:~
-ssh <user>@controlplane "bash ~/bootstrap-controlplane.sh"
+scp bootstrap_controlplane.sh <user>@controlplane:~
+ssh <user>@controlplane "bash ~/bootstrap_controlplane.sh"
 ```
 
 At the end of the script, kubeadm will print a `kubeadm join` command. Copy it — you'll need it for the worker nodes.
 
-### 3. Bootstrap the Worker Nodes
+### 2. Bootstrap the Worker Nodes
 
-SSH into each worker and run the `kubeadm join` command printed in the previous step:
+Copy and run the worker script on each worker node:
+
+```bash
+scp bootstrap_workernode.sh <user>@node01:~
+ssh <user>@node01 "bash ~/bootstrap_workernode.sh"
+```
+
+Then run the `kubeadm join` command from the previous step:
 
 ```bash
 ssh <user>@node01
@@ -81,7 +75,7 @@ ssh <user>@node01
 
 Repeat for each additional worker node.
 
-### 4. Verify the Cluster
+### 3. Verify the Cluster
 
 From `controlplane`:
 

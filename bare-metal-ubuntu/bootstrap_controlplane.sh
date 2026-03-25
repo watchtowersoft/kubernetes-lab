@@ -79,16 +79,17 @@ read -rp "Installing metric server pod. Is this a single node cluster? [y/N]: " 
 if [[ "${answer,,}" =~ ^(y|yes)$ ]]; then
   echo "disabling controlplane node taint"
   kubectl taint nodes controlplane node-role.kubernetes.io/control-plane:NoSchedule-
-else
+fi
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
 # Prevent laptop from going to sleep when lid is closed (this is a server)
-cat <<EOF >> /etc/systemd/logind.conf
+cat <<EOF | sudo tee -a /etc/systemd/logind.conf >/dev/null
 HandleLidSwitch=ignore
 HandleLidSwitchExternalPower=ignore
 HandleLidSwitchDocked=ignore
 EOF
 
+sudo systemctl daemon-reload
 sudo systemctl restart systemd-logind
 
 echo "bootstrap completed! take note of the kubeadm join command if you have workernodes to deploy"
