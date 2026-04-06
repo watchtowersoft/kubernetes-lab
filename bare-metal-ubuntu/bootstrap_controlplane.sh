@@ -47,9 +47,11 @@ sudo echo "serverTLSBootstrap: true" >> /var/lib/kubelet/config.yaml
 sudo systemctl daemon-reload
 sudo systemctl restart kubelet
 
+# Approve the pending kubelet csr to allow secure pod deployment.
+for i in $(kubectl get csr -o name); do kubectl certificate approve $i;done
 
 # Get interface and ip address
-INTERFACE="wlp0s20f3" # Replace with your interface name if different
+INTERFACE=$(ip addr | grep UP | grep -vE 'veth|cni|flannel|lo' | awk '{print $2}' | sed 's/.$//') # Replace with your interface name if different
 IP_ADDRESS=$(ip addr show $INTERFACE | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
 echo "The IP address is: $IP_ADDRESS"
 
@@ -70,7 +72,7 @@ sudo snap install yq
 curl -LO https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 sleep 1
 sudo chown k8s:k8s kube-flannel.yml
-# yq -i '.spec.template.spec.containers[].args += "--iface=wlp0s20f3"' kube-flannel.yml
+# yq -i '.spec.template.spec.containers[].args += "--iface=$INTERFACE"' kube-flannel.yml
 sleep 1
 kubectl apply -f kube-flannel.yml
 
