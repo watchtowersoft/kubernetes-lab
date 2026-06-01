@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Bootstrapping latest Kubernetes 1.35 version"
+echo "Bootstrapping latest Kubernetes 1.36 version"
 echo "Starting containerd installation for Ubuntu/Debian..."
 # Configure kernel modules
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
@@ -36,8 +36,8 @@ sudo sed -i '/\/swap.img/s/^/#/' /etc/fstab
 # Install latest version of kubeadm, kubelet, kubectl
 sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl gpg
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.35/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.35/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
