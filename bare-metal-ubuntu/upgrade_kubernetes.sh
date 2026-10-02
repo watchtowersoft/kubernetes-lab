@@ -248,9 +248,9 @@ if [[ "$NODE_ROLE" == "controlplane" ]]; then
   echo "Draining node: $NODE_NAME"
   kubectl drain "$NODE_NAME" --ignore-daemonsets --delete-emptydir-data
 
-  sudo apt-mark unhold kubelet kubectl
-  sudo apt-get install -y "kubelet${PKG_SUFFIX}" "kubectl${PKG_SUFFIX}"
-  sudo apt-mark hold kubelet kubectl
+  sudo apt-mark unhold kubelet kubectl containerd
+  sudo apt-get install -y "kubelet${PKG_SUFFIX}" "kubectl${PKG_SUFFIX}" containerd
+  sudo apt-mark hold kubelet kubectl containerd
 
   sudo systemctl daemon-reload
   sudo systemctl restart kubelet
@@ -270,9 +270,9 @@ else
   echo "  kubectl drain $(hostname) --ignore-daemonsets --delete-emptydir-data"
   read -rp "Press Enter once the node has been drained from the control plane..."
 
-  sudo apt-mark unhold kubelet kubectl
-  sudo apt-get install -y "kubelet${PKG_SUFFIX}" "kubectl${PKG_SUFFIX}"
-  sudo apt-mark hold kubelet kubectl
+  sudo apt-mark unhold kubelet kubectl containerd
+  sudo apt-get install -y "kubelet${PKG_SUFFIX}" "kubectl${PKG_SUFFIX}" containerd
+  sudo apt-mark hold kubelet kubectl containerd
 
   sudo systemctl daemon-reload
   sudo systemctl restart kubelet
