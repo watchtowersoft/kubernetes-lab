@@ -5,7 +5,7 @@ curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --
 echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
 sudo apt-get install -y containerd kubelet kubeadm kubectl
-sudo apt-mark hold kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl containerd
 sudo systemctl enable --now kubelet
 
 #configure containerd
@@ -13,6 +13,12 @@ sudo mkdir /etc/containerd
 containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' | sed 's/pause:3.8/pause:3.10.1/' | sudo tee /etc/containerd/config.toml
 sudo systemctl restart containerd
 
+# Load the kernel modules now and on every boot, so pod networking survives a vagrant reload
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+sudo modprobe overlay
 sudo modprobe br_netfilter
 cat <<EOF | sudo tee /etc/sysctl.d/k8s-flannel.conf
 net.bridge.bridge-nf-call-iptables = 1

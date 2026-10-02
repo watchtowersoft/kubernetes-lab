@@ -107,6 +107,12 @@ def setup_ssh_worker(node)
   node.vm.provision "setup-ssh-worker", :type => "shell", :path => "scripts/vagrant/setup-ssh-worker.sh"
 end
 
+# Configures the node to terminate its pods cleanly on halt/reload. Must run
+# after the bootstrap script. Shared with the bare metal path.
+def setup_graceful_shutdown(node)
+  node.vm.provision "graceful-shutdown", :type => "shell", :path => "../bare-metal-ubuntu/graceful_shutdown.sh"
+end
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -122,6 +128,10 @@ Vagrant.configure("2") do |config|
 
   config.vm.box = "ubuntu/jammy64"
   config.vm.boot_timeout = 900
+  # Vagrant powers a VM off if it has not halted within this many seconds (60 by
+  # default). The kubelet delays shutdown for up to 120s to terminate pods
+  # (see graceful_shutdown.sh), so leave room for that plus the OS shutdown.
+  config.vm.graceful_halt_timeout = 180
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -161,7 +171,8 @@ Vagrant.configure("2") do |config|
     node.vm.provision "file", source: "./scripts/vimrc", destination: "$HOME/.vimrc"
 
     node.vm.provision "shell", path: "./scripts/bootstrap_controlplane.sh"
-  
+    setup_graceful_shutdown node
+
   end
 
   # Provision Worker Nodes
@@ -193,6 +204,7 @@ Vagrant.configure("2") do |config|
       setup_ssh_worker node
 
       node.vm.provision "shell", path: "./scripts/bootstrap_workernode.sh"
+      setup_graceful_shutdown node
     end
   end
 
