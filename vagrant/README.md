@@ -185,6 +185,25 @@ vagrant up          # bring back up
 vagrant destroy -f  # tear everything down
 ```
 
+### Graceful shutdown
+
+Each VM is provisioned with [`graceful_shutdown.sh`](../bare-metal-ubuntu/graceful_shutdown.sh), the same script the bare metal path uses, so `vagrant halt` and `vagrant reload` let the kubelet terminate pods cleanly (up to 120s) instead of cutting them off. The Vagrantfile raises `graceful_halt_timeout` to 180s to match; Vagrant's 60s default would power the VM off partway through. See [Reboots](../bare-metal-ubuntu/README.md#reboots) for what the script manages and why.
+
+Workers are provisioned before they join the cluster, so only the host settings are applied at that point; the kubelet settings arrive from the control plane when the worker joins.
+
+To apply it to VMs built before this was added:
+
+```bash
+vagrant provision --provision-with graceful-shutdown
+```
+
+To check a node without changing it:
+
+```bash
+vagrant upload ../bare-metal-ubuntu/graceful_shutdown.sh /tmp/graceful_shutdown.sh controlplane
+vagrant ssh controlplane -c "bash /tmp/graceful_shutdown.sh --check"
+```
+
 ---
 
 ## Troubleshooting
