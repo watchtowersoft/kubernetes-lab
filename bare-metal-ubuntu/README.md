@@ -51,7 +51,7 @@ cd kubernetes-lab/bare-metal-ubuntu
 Copy and run the script on your `controlplane` host:
 
 ```bash
-scp bootstrap_controlplane.sh <user>@controlplane:~
+scp bootstrap_controlplane.sh graceful_shutdown.sh <user>@controlplane:~
 ssh <user>@controlplane "bash ~/bootstrap_controlplane.sh"
 ```
 
@@ -62,7 +62,7 @@ At the end of the script, kubeadm will print a `kubeadm join` command. Copy it â
 Copy and run the worker script on each worker node:
 
 ```bash
-scp bootstrap_workernode.sh <user>@node01:~
+scp bootstrap_workernode.sh graceful_shutdown.sh <user>@node01:~
 ssh <user>@node01 "bash ~/bootstrap_workernode.sh"
 ```
 
@@ -84,6 +84,64 @@ kubectl get nodes
 ```
 
 All nodes should show `Ready` status within a few minutes.
+
+---
+
+## Reboots
+
+By default a rebooting node kills its pods without warning and leaves them behind in a terminated state. On a single-node cluster nothing else can pick the workload up, so `graceful_shutdown.sh` configures the node to terminate pods cleanly first. The bootstrap scripts run it when it sits next to them; it is safe to re-run on any node at any time, including a cluster built before the script existed:
+
+```bash
+./graceful_shutdown.sh           # apply
+./graceful_shutdown.sh --check   # report drift only, exit 1 if any
+```
+
+### What it manages
+
+| Setting | Where | Why |
+|---------|-------|-----|
+| `shutdownGracePeriod: 2m0s`, `shutdownGracePeriodCriticalPods: 30s` | `/var/lib/kubelet/config.yaml` and the `kubelet-config` ConfigMap | Kubelet delays shutdown and terminates pods in order |
+| `InhibitDelayMaxSec=120` | `/etc/systemd/logind.conf.d/unattended-upgrades-logind-maxdelay.conf` | logind must allow a delay as long as the kubelet's grace period |
+| `--terminated-pod-gc-threshold=1` | `kube-controller-manager` static pod manifest and the `kubeadm-config` ConfigMap | Cleans up the terminated pods a shutdown leaves behind |
+| `unattended-upgrades` purged, `apt-daily` timers disabled | Host | Nothing upgrades or restarts packages on its own schedule |
+| `kubelet`, `kubeadm`, `kubectl`, `containerd` held | apt | These only change through the procedures below |
+
+The two ConfigMaps (written on control plane nodes only) are the part that makes this stick: `kubeadm upgrade` regenerates the kubelet config and the static pod manifests from them, so settings that exist only in the node's files disappear on the next upgrade without any error. `upgrade_kubernetes.sh` runs the `--check` at the end for that reason.
+
+The logind file keeps that odd name on purpose. The `unattended-upgrades` package ships a drop-in of the same name in `/usr/lib/systemd/logind.conf.d` that forces 30s, and because drop-ins are merged in filename order it beats the kubelet's own `99-kubelet.conf`. A file of the same name in `/etc` masks it, and keeps masking it if the package ever comes back.
+
+With automatic upgrades off, OS patching is manual: run `sudo apt-get update && sudo apt-get upgrade` yourself on a schedule you choose.
+
+### Reboot procedure
+
+```bash
+./graceful_shutdown.sh --check   # must be clean â€” do not reboot on drift
+sudo systemctl reboot
+```
+
+Use `systemctl reboot` (or `shutdown -r`). Anything that bypasses logind, such as `reboot -f` or holding the power button, skips the grace period.
+
+### Post-boot checks
+
+```bash
+kubectl get nodes                                         # Ready
+kubectl get pods -A --field-selector status.phase!=Running   # nothing left over from before the reboot
+./graceful_shutdown.sh --check                            # kubelet has its inhibitor lock again
+```
+
+### Upgrading containerd on its own
+
+`upgrade_kubernetes.sh` upgrades containerd together with the kubelet. To upgrade it separately:
+
+```bash
+sudo apt-mark unhold containerd
+sudo apt-get update && sudo apt-get install -y containerd
+sudo crictl info >/dev/null && echo "runtime ok"
+grep SystemdCgroup /etc/containerd/config.toml            # must still be true
+sudo apt-mark hold containerd
+```
+
+Then reboot using the procedure above.
 
 ---
 
