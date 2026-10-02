@@ -282,5 +282,17 @@ else
   echo "  kubectl uncordon $(hostname)"
 fi
 
+# kubeadm regenerates the kubelet config and static pod manifests from the
+# kube-system ConfigMaps, and nothing fails loudly if the graceful shutdown
+# settings got dropped along the way — so check before the next reboot does.
+GRACEFUL_SHUTDOWN_SCRIPT="$(dirname "$0")/graceful_shutdown.sh"
+echo ""
+if [[ -f "$GRACEFUL_SHUTDOWN_SCRIPT" ]]; then
+  bash "$GRACEFUL_SHUTDOWN_SCRIPT" --check \
+    || echo "WARNING: graceful shutdown settings drifted during the upgrade — run $GRACEFUL_SHUTDOWN_SCRIPT before rebooting."
+else
+  echo "Note: graceful_shutdown.sh not found next to this script — copy it over and run it with --check before rebooting."
+fi
+
 echo ""
 echo "=== Upgrade to ${APPLY_VERSION} complete ==="

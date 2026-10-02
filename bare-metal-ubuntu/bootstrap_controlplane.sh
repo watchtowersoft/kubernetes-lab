@@ -97,4 +97,11 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl restart systemd-logind
 
+# Terminate pods cleanly on reboot (see "Reboots" in the README)
+if [[ -f "$(dirname "$0")/graceful_shutdown.sh" ]]; then
+  bash "$(dirname "$0")/graceful_shutdown.sh"
+else
+  echo "graceful_shutdown.sh not found next to this script — copy it over and run it before the first reboot"
+fi
+
 echo "bootstrap completed! take note of the kubeadm join command if you have workernodes to deploy"
